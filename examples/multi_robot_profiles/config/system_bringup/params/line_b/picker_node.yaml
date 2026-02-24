@@ -1,0 +1,5 @@
+picker_node:
+  ros__parameters:
+    robot_vel: 0.48
+    robot_accel: 9.0
+    basket_left_x: -0.76
