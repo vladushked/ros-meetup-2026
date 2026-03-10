@@ -1,71 +1,123 @@
-## 1) Улучшаем опыт разработки в ROS 2
+## 1) Титул
 
-**Практики из production-стека: launch-контракт, build/run tooling, базовые ноды, runtime-параметры, asyncio и async FSM**
+Заголовок:
+**Улучшаем опыт разработки в ROS2**
 
-Проблема, с которой стартовали:
-- один и тот же код должен работать на разных роботах и стендах;
-- при росте проекта launch/параметры/коллбеки становятся хрупкими;
-- runtime-настройки должны сохраняться и не ломать соседние профили.
+Подзаголовок:
+Владислав Плотников, разработчик ПО верхнего уровня.
 
 ---
 
-## 2) Что именно ломается без архитектурных правил
+## 2) План доклада
 
-**Проблема**
+1. О компании L-Labs и какой продукт мы делаем.
+2. Как устроен робот-сортировщик и почему для него важна инженерная дисциплина.
+3. Какие практики в ROS 2 помогли удержать систему управляемой.
+4. Что из этого можно перенести в другой проект уже завтра.
+
+---
+
+## 3) О компании L-Labs
+
+**Кто мы**
+- L-Labs делает решения в робототехнике, компьютерном зрении и видеоаналитике;
+- фокус на прикладных задачах автоматизации: контроль качества, безопасность, экологические задачи;
+- в этом докладе разбираем реальный кейс автоматической сортировки отходов.
+
+**Почему этот контекст важен**
+- это не учебный пример, а production-система с реальными ограничениями;
+- нужна воспроизводимая эксплуатация, а не только рабочий прототип.
+
+---
+
+## 4) Продукт: промышленный робот-сортировщик ТКО
+
+**Что это за система**
+- промышленный робот-манипулятор портального типа;
+- 4 степени свободы: перемещение по `X/Y/Z` и вращение хвата вокруг вертикальной оси;
+- сверху установлены робот и модуль технического зрения над конвейерной лентой;
+- ПО робота написано на базе ROS 2.
+
+**Что умеет система**
+- распознает объекты с помощью RGB-D и детектора объектов;
+- определяет точки и углы захвата;
+- может сортировать до 4 целевых фракций одновременно;
+- решение ориентировано на промышленную эксплуатацию и российскую морфологию отходов.
+
+---
+
+## 5) Как работает робот
+
+**Цикл работы**
+1. При запуске выполняются калибровка МТЗ и проверка подсистем.
+2. Оператор задает целевые фракции на панели.
+3. МТЗ передает изображения в ПО верхнего уровня.
+4. Vision-стек выполняет детекцию и трекинг объектов.
+5. Алгоритм выбирает наиболее релевантный объект.
+6. Робот захватывает объект и отправляет его в нужную урну.
+
+**Визуал**
+- здесь вставить GIF с работой робота;
+- подпись под GIF: конвейер -> детекция -> выбор цели -> захват -> сортировка.
+
+---
+
+## 6) Почему в таком проекте быстро нужен порядок в ROS 2
+
+Проблемы, которые проявились в production:
+- один и тот же код должен работать на разных роботах и стендах;
 - аргументы launch теряются между include-уровнями;
 - сборка и запуск нужного пакета занимают слишком много рутинных шагов;
-- параметры «крутятся» в rqt, но после рестарта откатываются;
-- изменение конфигурации одного робота случайно влияет на другого;
-- callback-heavy код трудно читать и сопровождать.
+- параметры удобно менять в runtime, но без сохранения они откатываются после рестарта;
+- изменение конфигурации одного робота не должно влиять на другого;
+- callback-heavy код трудно читать, тестировать и сопровождать.
 
-**Почему нужны системные решения, а не локальные фиксы**
-- проект должен масштабироваться по количеству нод и стендов;
-- поведение должно быть предсказуемым для всей команды.
+Главная мысль:
+- дальше не набор абстрактных best practices, а конкретные решения под реальную роботизированную систему.
 
 ---
 
-## 3) Launch как контракт системы, а не «скрипт запуска»
+## 7) Launch как контракт системы
 
 **Проблема**
-- когда entrypoint не централизован, сложно понять, какие аргументы реально поддерживаются системой.
+- когда entrypoint не централизован, команда не понимает, какие аргументы реально поддерживает система.
 
 **Решение**
 - единая точка входа: `src/system_bringup/launch/system_bringup.launch.py`;
-- здесь объявляются общие аргументы и интерфейсные топики;
-- здесь же подключаются package-level launch файлы.
+- в root launch объявляются общие аргументы и интерфейсные топики;
+- package-level launch файлы получают только явно прокинутые значения.
 
 ```python
-# src/system_bringup/launch/system_bringup.launch.py
 DeclareLaunchArgument("visualize", default_value="false")
 DeclareLaunchArgument("robot_pose_topic", default_value="/robot/pose")
 DeclareLaunchArgument("fsm_state_topic", default_value="/fsm/state")
 
 IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(...'manipulator_stack.launch.py'),
+    PythonLaunchDescriptionSource(... "manipulator_stack.launch.py"),
     launch_arguments={
-        'visualize': LaunchConfiguration("visualize"),
-        'robot_pose_topic': LaunchConfiguration("robot_pose_topic"),
-        'fsm_state_topic': LaunchConfiguration("fsm_state_topic"),
+        "visualize": LaunchConfiguration("visualize"),
+        "robot_pose_topic": LaunchConfiguration("robot_pose_topic"),
+        "fsm_state_topic": LaunchConfiguration("fsm_state_topic"),
     }.items()
 )
 ```
 
 Эффект:
-- появилось единое место для ревью launch-контракта.
+- появляется одно место для ревью launch-контракта;
+- поведение системы становится предсказуемым.
 
 ---
 
-## 4) Прокидка аргументов по цепочке: root -> package -> node
+## 8) Прокидка аргументов: root -> package -> node
 
 **Проблема**
-- даже объявленный аргумент бесполезен, если он не дошел до `Node(...)`.
+- объявленный аргумент бесполезен, если он не дошел до `Node(...)`.
 
 **Решение**
-- явная прокидка на каждом уровне;
-- в package launch аргументы мапятся в `parameters` и `remappings` ноды.
+- прокидка должна быть явной на каждом уровне;
+- package launch мапит аргументы в `parameters` и `remappings` ноды.
 
 ```python
-# src/manipulator_stack/launch/manipulator_stack.launch.py
 Node(
     package="manipulator_stack",
     executable="motion_executor_node",
@@ -84,50 +136,47 @@ Node(
 ```
 
 Эффект:
-- изменения аргумента в root-launch предсказуемо влияют на конкретную ноду.
+- изменение аргумента в root launch предсказуемо влияет на конкретную ноду;
+- проще сопровождать систему при росте числа пакетов.
 
 ---
 
-## 5) Система сборки и запуска в большом ROS 2 workspace
+## 9) Система сборки и запуска в большом ROS 2 workspace
 
 **Проблема**
-- в многопакетном проекте сложно быстро собрать и запустить нужный кусок системы;
-- команды `colcon build` и `ros2 launch` становятся длинными и ошибкоопасными;
-- без автодополнений теряется время на поиск имен пакетов и launch-файлов;
-- dev-запуск в Docker часто отличается между разработчиками.
+- в многопакетном проекте длинные команды становятся медленными и ошибкоопасными;
+- dev-запуск в Docker начинает отличаться между разработчиками.
 
 **Решение**
 - стандартизировать workflow через утилитарные скрипты:
-  - `scripts/build.sh` — сборка workspace/пакетов, selective build, clean, verbose, rosdep;
-  - `scripts/run.sh` — запуск launch с коротким интерфейсом и флагом `-v` для `visualize:=true`;
-  - `scripts/docker.sh` — единая точка входа в dev-контейнер с `.env`, `ROS_DOMAIN_ID`, GPU/X11;
-  - `docker/ros2_build_completion.sh` и `docker/ros2_launch_completion.sh` — автодополнения для `b` и `r`.
+  - `scripts/build.sh` для selective build и типовых сценариев сборки;
+  - `scripts/run.sh` для короткого запуска launch-файлов;
+  - `scripts/docker.sh` как единая точка входа в dev-контейнер;
+  - shell completion для `b` и `r`.
 
 ```bash
-# ключевой dev workflow
-./d                         # вход в контейнер (alias на scripts/docker.sh)
-b -u manipulator_stack      # сборка пакета с зависимостями (completion по package.xml)
-r -v system_bringup         # запуск launch с visualize:=true (completion по install/.../launch)
+./d                         # вход в контейнер
+b -u manipulator_stack      # сборка пакета с зависимостями
+r -v system_bringup         # запуск launch с visualize:=true
 ```
 
 Эффект:
-- сокращается путь «изменил код -> собрал -> запустил -> проверил»;
-- ниже порог входа в проект и меньше операционных ошибок в командах.
+- сокращается путь "изменил код -> собрал -> запустил -> проверил";
+- ниже порог входа в проект и меньше операционных ошибок.
 
 ---
 
-## 6) Базовый класс ноды: единая рамка для sync и async
+## 10) Базовый класс ноды: единая рамка для sync и async
 
 **Проблема**
-- без базового класса каждая нода дублирует lifecycle и параметрическую логику.
+- без общей рамки каждая нода дублирует lifecycle и параметрическую логику.
 
 **Решение**
 - `BaseNodeAbstract` задает обязательный контракт;
-- `BaseNode` реализует общий runtime (логгер, параметрический файл, callbacks);
-- `AsyncBaseNode` расширяет `BaseNode` async-механикой.
+- `BaseNode` берет на себя общий runtime;
+- `AsyncBaseNode` расширяет модель асинхронными циклами.
 
 ```python
-# src/ros_runtime_utils/ros_runtime_utils/node_base.py
 class BaseNodeAbstract(ABC, Node):
     @abstractmethod
     def init_params(self): ...
@@ -146,85 +195,64 @@ class BaseNode(BaseNodeAbstract):
         self.init_ros_interfaces()
 ```
 
-```python
-# как строится конечная нода на базе класса
-class MySyncNode(BaseNode):
-    def __init__(self):
-        super().__init__(package_name="my_pkg", node_name="my_sync_node")
-    def init_params(self): ...
-    def init_ros_interfaces(self): ...
-    def update_params(self, param_list): ...
-
-class MyAsyncNode(AsyncBaseNode):
-    def __init__(self):
-        super().__init__(package_name="my_pkg", node_name="my_async_node")
-    @register_loop
-    async def worker_loop(self):
-        while rclpy.ok():
-            await asyncio.sleep(0.01)
-```
-
 Эффект:
-- новую ноду проще собирать по шаблону, меньше расхождений в поведении.
+- новую ноду проще собрать по понятному шаблону;
+- поведение sync и async нод становится более единообразным.
 
 ---
 
-## 7) Runtime изменение и сохранение параметров
+## 11) Runtime-параметры: менять в работе и сохранять на диск
 
 **Проблема**
-- tuning в runtime полезен только если переживает рестарт.
+- tuning в runtime ценен только тогда, когда параметры переживают рестарт.
 
 **Решение**
-- в базовом классе: callback изменений + сохранение в YAML;
-- в конкретной ноде: обновление runtime-полей в `update_params`.
+- callback изменений обновляет runtime-поля;
+- после изменения параметры сохраняются в YAML.
 
 ```python
-# src/ros_runtime_utils/ros_runtime_utils/node_base.py
-# + src/manipulator_stack/manipulator_stack/task_orchestrator_node.py
 def update_params(self, param_list):
     for param in param_list:
         match param.name:
-            case 'robot_vel':
+            case "robot_vel":
                 self.robot.vel = param.value
-            case 'robot_accel':
+            case "robot_accel":
                 self.robot.accel = param.value
     self.save_params(param_list)
     return SetParametersResult(successful=True)
 
 def save_params(self, param_list):
-    params = {self.get_name(): {'ros__parameters': {p.name: p.value for p in self._parameters.values()}}}
-    with open(self.params_file, 'w') as f:
+    params = {
+        self.get_name(): {
+            "ros__parameters": {p.name: p.value for p in self._parameters.values()}
+        }
+    }
+    with open(self.params_file, "w") as f:
         yaml.dump(params, f, default_flow_style=False)
 ```
 
 Эффект:
-- параметр меняется сразу в работе ноды и фиксируется на диск.
+- параметр меняется сразу в работе ноды;
+- результат настройки не теряется после перезапуска.
 
 ---
 
-## 8) Изоляция параметров между роботами
+## 12) Изоляция конфигов между роботами и стендами
 
 **Проблема**
-- конфиги разных роботов могут смешиваться при общей кодовой базе.
+- при общей кодовой базе конфиги разных роботов легко смешиваются.
 
 **Решение**
-- профильные пути через `CONFIG_PKG` + `ROBOT_PROFILE`;
-- чтение/поиск реализованы в `ros_runtime_utils.config_paths`;
-- для `params/models/rviz/rqt` применяется профильная стратегия.
+- профильные пути задаются через `CONFIG_PKG` и `ROBOT_PROFILE`;
+- поиск конфигов и fallback-логика вынесены в общий util.
 
 ```python
-# src/ros_runtime_utils/ros_runtime_utils/config_paths.py
 config_pkg = os.getenv("CONFIG_PKG", "").strip()
 robot_profile = os.getenv("ROBOT_PROFILE", "").strip()
 profiled_config_file = package_share / config_dir / robot_profile / config_name
 
 if profiled_config_file.exists():
     return profiled_config_file
-
-if copy_fallback_to_profile and fallback_source.exists():
-    profiled_config_file_src.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(fallback_source, profiled_config_file_src)
-    return profiled_config_file_src
 ```
 
 Практика запуска:
@@ -235,25 +263,25 @@ ros2 launch system_bringup system_bringup.launch.py visualize:=true
 ```
 
 Эффект:
-- правки профиля `lab` не перетирают `line_a` и `line_b`.
+- правки профиля `lab` не перетирают `line_a` и `line_b`;
+- один код работает на нескольких конфигурациях без ручного хаоса.
 
 ---
 
-## 9) Asyncio в ROS 2: что взяли из `asyncio.md` и проверили в коде
+## 13) Asyncio в ROS 2: линейный код вместо каскада коллбеков
 
-Источник вдохновения для async-подхода:
+Источник вдохновения:
 - https://github.com/m2-farzan/ros2-asyncio
 
 **Проблема**
-- «каскадный» callback-код хуже читается, труднее управлять ошибками.
+- callback-heavy код плохо читается и усложняет обработку ошибок.
 
 **Решение**
 - отдельный `ros_loop` с `spin_once`;
-- бизнес-циклы пишутся как `async def`;
-- ошибки поднимаются через `FIRST_EXCEPTION`.
+- бизнес-циклы пишутся как обычные `async def`;
+- исключения поднимаются через `FIRST_EXCEPTION`.
 
 ```python
-# src/ros_runtime_utils/ros_runtime_utils/node_base.py
 @register_loop
 async def ros_loop(self):
     while rclpy.ok():
@@ -269,24 +297,22 @@ def run(self):
         task.result()
 ```
 
-Проверка с `asyncio.md`:
-- идея «отдельный ros-loop + линейный async-код» совпадает;
-- использование `FIRST_EXCEPTION` для видимости ошибок реализовано.
+Эффект:
+- код бизнес-логики становится линейнее;
+- ошибки не теряются внутри дерева коллбеков.
 
 ---
 
-## 10) `@register_loop`: масштабирование async-задач внутри одной ноды
+## 14) `@register_loop`: несколько независимых async-задач в одной ноде
 
 **Проблема**
-- множество таймеров и коллбеков без общей модели выполнения.
+- у робота одновременно живут grasping, FSM, heartbeat, watchdog и работа с внешними сервисами.
 
 **Решение**
-- декоратор отмечает loop-методы;
-- `AsyncBaseNode.__init_subclass__` автоматически собирает их;
-- `run()` запускает все циклы параллельно.
+- декоратор помечает loop-методы;
+- `AsyncBaseNode` автоматически собирает их и запускает параллельно.
 
 ```python
-# src/manipulator_stack/manipulator_stack/task_orchestrator_node.py
 @register_loop
 async def grasping_loop(self):
     while ok():
@@ -306,49 +332,28 @@ async def _sensor_loop(self):
 ```
 
 Эффект:
-- в одной ноде можно прозрачно держать несколько независимых воркеров.
+- у каждой фоновой задачи остается локальная, читаемая логика;
+- проще масштабировать ноду без переписывания orchestration-кода.
 
 ---
 
-## 11) Пример: несколько async loop в `TaskOrchestratorNode`
-
-**Проблема**
-- нужно одновременно вести grasping-пайплайн, FSM, watchdog и обмен с внешними сервисами.
-
-**Решение**
-- разделение по отдельным циклам с разной частотой и ответственностью:
-- `grasping_loop`: стадии захвата;
-- `_execute_fsm_state_loop`: реакции на состояние автомата;
-- `_send_status_loop`: heartbeat/статус;
-- `_watchdog_loop`: контроль доступности каналов.
-
-Почему это решение принято:
-- каждая задача получает локальную, читаемую логику;
-- меньше перекрестных зависимостей, проще дебаг.
-
-Ограничение:
-- нельзя блокировать event loop; все тяжелые операции должны быть async-friendly.
-
----
-
-## 12) Асинхронная FSM: управляемые переходы вместо скрытых side effects
+## 15) Асинхронная FSM: явные переходы вместо скрытых side effects
 
 **Проблема**
 - сложные переходы состояния в управлении роботом быстро становятся неявными.
 
 **Решение**
-- `TaskFSM` на `transitions.AsyncMachine`;
+- `TaskFSM` построена на `transitions.AsyncMachine`;
 - pending transition исполняется централизованно в `step()`.
 
 ```python
-# src/manipulator_stack/manipulator_stack/async_state_machine.py
 self.machine = AsyncMachine(
     model=self,
     states=states,
     transitions=transitions,
     initial=TaskFSM.State.CHECKS,
     auto_transitions=False,
-    after_state_change='_execute_state',
+    after_state_change="_execute_state",
 )
 
 async def step(self):
@@ -359,7 +364,7 @@ async def step(self):
             await self.trigger(pending)
 ```
 
-Интеграция в ноду:
+Интеграция:
 ```python
 @register_loop
 async def _fsm_loop(self):
@@ -369,19 +374,41 @@ async def _fsm_loop(self):
 ```
 
 Эффект:
-- переходы стали явными, валидируемыми и воспроизводимыми.
+- переходы становятся явными, валидируемыми и воспроизводимыми;
+- проще отлаживать поведение робота в сложных сценариях.
 
 ---
 
-## 13) Что можно внедрить в другой ROS 2 проект уже завтра
+## 16) Что можно внедрить в другой ROS 2 проект уже завтра
 
-1. Ввести единый root launch и правило: любой аргумент прокидывается до node-level без потерь.
-2. Обернуть dev workflow в скрипты `build/run/docker` и добавить shell completion для `b/r`.
-3. Базовый класс ноды с обязательными `init_params/init_ros_interfaces/update_params`.
-4. Runtime persistence параметров в YAML сразу после изменения.
-5. Профильные конфиги через `CONFIG_PKG/ROBOT_PROFILE`, чтобы исключить смешивание роботов.
-6. Async loop-модель (`register_loop`) для читаемой конкуррентности.
-7. Async FSM для явного контроля состояний и переходов.
+1. Ввести единый root launch и правило явной прокидки аргументов до node-level.
+2. Обернуть dev workflow в `build/run/docker` и дать команде completion.
+3. Вынести общую рамку ноды в базовый класс.
+4. Сохранять runtime-параметры сразу после изменения.
+5. Разделять конфиги по профилям через `CONFIG_PKG/ROBOT_PROFILE`.
+6. Использовать async loop-модель для читаемой конкуррентности.
+7. Делать FSM явной и управляемой, а не размазанной по коллбекам.
 
 **Главная идея доклада**
-- эти решения приняты не ради «красоты кода», а для устойчивой эксплуатации нескольких роботов в одной кодовой базе.
+- эти решения нужны не ради "красоты кода", а ради устойчивой эксплуатации нескольких роботов в одной кодовой базе.
+
+---
+
+## 17) Контакты
+
+**Владислав Плотников**
+
+Разработчик ПО верхнего уровня
+
+Что показать на слайде:
+- имя и должность;
+- QR-код на Telegram-канал: `https://t.me/vladosnakodil`;
+- подпись: "В Telegram-канале будет ссылка на tutorial-репозиторий GitHub";
+- подпись: "Все остальные контакты можно найти в канале".
+
+Контакты для speaker notes или мелкого текста на слайде:
+- личный Telegram: `https://t.me/vladislavplotnikov`;
+- сайт: `vladislavplotnikov.ru`;
+- канал: `ВЛАДОС НАКОДИЛ` — `https://t.me/vladosnakodil`;
+- компания: `l-labs.tech`;
+- Telegram компании: `https://t.me/L_Labs`.

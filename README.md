@@ -1,7 +1,7 @@
 # ROS Meetup 2026 Materials
 
 Этот каталог содержит:
-- `presentation.md` — готовая презентация (обезличенная версия);
+- `presentation.md` — актуальный план презентации;
 - `tutorials/` — пошаговые туториалы по каждой теме презентации;
 - `examples/` — полноценные пример-файлы, на которые ссылаются туториалы.
 
@@ -26,3 +26,16 @@
 6. `tutorials/06-ros2-asyncio.md`
 7. `tutorials/07-register-loop-pattern.md`
 8. `tutorials/08-async-fsm.md`
+
+## Контакты
+
+Докладчик:
+- Владислав Плотников
+- Разработчик ПО верхнего уровня
+- Telegram: https://t.me/vladislavplotnikov
+- Сайт: vladislavplotnikov.ru
+- Telegram-канал: ВЛАДОС НАКОДИЛ — https://t.me/vladosnakodil
+
+Компания:
+- Сайт: l-labs.tech
+- Telegram-канал: https://t.me/L_Labs
