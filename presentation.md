@@ -310,9 +310,22 @@ ros2 launch system_bringup system_bringup.launch.py visualize:=true
   - shell completion для `b` и `r`.
 
 ```bash
-./d                         # вход в контейнер
-b -u manipulator_stack      # сборка пакета с зависимостями
-r -v system_bringup         # запуск launch с visualize:=true
+# запуск контейнера
+./d 
+# запуск контейнера с указанием ROS_DOMAIN_ID=52
+./d 52 
+# полная очистка (build, log, install)
+b -с 
+# сборка всего проекта
+b 
+# запуск entrypoint launch проекта (project_name/launch/project_name.launch.py)
+r 
+# удаление файлов сборки для пакета robot_control
+b -с robot_control 
+# сборка пакета robot_control
+b robot_control 
+# запуск entrypoint launch пакета robot_control (robot_control/launch/project_name.launch.py) с аргументом visualize:=true
+r -v robot_control 
 ```
 
 Эффект:
