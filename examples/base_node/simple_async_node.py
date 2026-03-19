@@ -15,10 +15,10 @@ class SimpleAsyncNode(AsyncBaseNode):
             node_name="simple_async_node",
             params_file=Path("simple_async_node.yaml"),
         )
+        self.period_sec = float(self.get_parameter("period_sec").value)
 
     def init_params(self) -> None:
         self.declare_parameter("period_sec", 0.5)
-        self.period_sec = float(self.get_parameter("period_sec").value)
 
     def init_ros_interfaces(self) -> None:
         self.pub = self.create_publisher(String, "async/out", 10)

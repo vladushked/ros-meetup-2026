@@ -1,28 +1,48 @@
 # Tutorial 05: Изоляция конфигов для нескольких роботов
 
+Соответствует слайдам 12-13 из [presentation.md](../presentation.md).
+
 ## Проблема
-В одном репозитории конфиги разных роботов легко «перетирают» друг друга.
+
+Когда одна кодовая база обслуживает несколько роботов и стендов, общий конфиг быстро превращается в источник merge conflicts и случайных регрессий.
 
 ## Цель
-Сделать profile-based конфигурацию через переменные окружения, чтобы изменения одного профиля не влияли на другие.
+
+Разделить конфиги по профилям, чтобы изменения одного робота не влияли на другого.
 
 ## Файлы примера
-- `ros-meetup-2026/examples/multi_robot_profiles/config_paths.py`
-- `ros-meetup-2026/examples/multi_robot_profiles/config/system_bringup/params/lab/picker_node.yaml`
-- `ros-meetup-2026/examples/multi_robot_profiles/config/system_bringup/params/line_a/picker_node.yaml`
-- `ros-meetup-2026/examples/multi_robot_profiles/config/system_bringup/params/line_b/picker_node.yaml`
+
+- [examples/multi_robot_profiles/config_paths.py](../examples/multi_robot_profiles/config_paths.py)
+- [examples/multi_robot_profiles/config/system_bringup/params/lab/picker_node.yaml](../examples/multi_robot_profiles/config/system_bringup/params/lab/picker_node.yaml)
+- [examples/multi_robot_profiles/config/system_bringup/params/line_a/picker_node.yaml](../examples/multi_robot_profiles/config/system_bringup/params/line_a/picker_node.yaml)
+- [examples/multi_robot_profiles/config/system_bringup/params/line_b/picker_node.yaml](../examples/multi_robot_profiles/config/system_bringup/params/line_b/picker_node.yaml)
 
 ## Механика
-1. Читаем `CONFIG_PKG` и `ROBOT_PROFILE`.
-2. Ищем профильный файл.
-3. Если отсутствует, копируем fallback в профиль (опционально).
-4. Возвращаем профильный путь.
 
-## Пример запуска профиля
+Паттерн строится вокруг двух переменных окружения:
+- `CONFIG_PKG` - пакет, в котором лежат профили конфигурации;
+- `ROBOT_PROFILE` - активный профиль, например `lab`, `line_a` или `line_b`.
+
+[config_paths.py](../examples/multi_robot_profiles/config_paths.py) решает задачу в таком порядке:
+1. читает `CONFIG_PKG` и `ROBOT_PROFILE`;
+2. ищет профильный файл в каталоге пакета конфигов;
+3. при необходимости берёт shared/fallback конфиг;
+4. опционально копирует fallback в профильный путь.
+
+## Пример запуска
+
 ```bash
 export CONFIG_PKG=system_bringup
-export ROBOT_PROFILE=line_a
+export ROBOT_PROFILE=lab
+ros2 launch system_bringup system_bringup.launch.py visualize:=true
 ```
 
+## Что это даёт
+
+- правки в профиле `lab` не затрагивают `line_a` и `line_b`;
+- профиль становится явной частью запуска;
+- один и тот же код работает на разных конфигурациях без ручной подмены файлов.
+
 ## Почему это решение принято
-Оно делает поведение робота воспроизводимым: профиль становится явной частью запуска, а не «состоянием машины». 
+
+Так конфигурация перестаёт быть "состоянием машины" и становится управляемой частью проекта.

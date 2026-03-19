@@ -1,28 +1,46 @@
 # Tutorial 04: Runtime изменение и сохранение параметров
 
+Соответствует слайду 15 из [presentation.md](../presentation.md).
+
 ## Проблема
-Параметры меняются через rqt/CLI, но после перезапуска ноды изменения пропадают.
+
+Менять параметры в runtime удобно, но без сохранения в YAML результат пропадает после перезапуска ноды.
 
 ## Цель
-Сделать runtime tuning персистентным: параметр обновляется в объекте ноды и сохраняется в YAML.
+
+Сделать tuning персистентным: параметр меняется в объекте ноды и сразу записывается в конфиг.
 
 ## Файлы примера
-- `ros-meetup-2026/examples/runtime_params/tunable_node.py`
-- `ros-meetup-2026/examples/runtime_params/tunable_node.yaml`
 
-## Как работает
+- [examples/runtime_params/node_base.py](../examples/runtime_params/node_base.py)
+- [examples/runtime_params/tunable_node.py](../examples/runtime_params/tunable_node.py)
+- [examples/runtime_params/tunable_node.yaml](../examples/runtime_params/tunable_node.yaml)
+
+## Как это устроено
+
 1. Нода объявляет параметры в `init_params`.
 2. В `update_params` обновляет внутренние поля.
-3. Вызывает `super().update_params(...)`, который сохраняет YAML.
+3. Базовый класс сохраняет актуальные `ros__parameters` в YAML через `save_params(...)`.
+
+В примере [tunable_node.py](../examples/runtime_params/tunable_node.py):
+- `gain` и `bias` влияют на публикуемое значение;
+- после `ros2 param set` новые значения остаются в [tunable_node.yaml](../examples/runtime_params/tunable_node.yaml).
 
 ## Проверка
-Пример изменения параметра:
+
 ```bash
 ros2 param set /tunable_node gain 1.8
 ros2 param set /tunable_node bias -0.1
 ```
 
-После рестарта должно остаться новое значение `gain/bias` в YAML.
+После этого в YAML должны сохраниться новые значения `gain` и `bias`.
+
+## Практический эффект
+
+- оператор видит результат сразу в работе ноды;
+- подобранные параметры не теряются после рестарта;
+- конфиг легко версионировать через Git.
 
 ## Почему это решение принято
-Иначе каждая настройка превращается в ручной post-mortem после перезапуска и снижает управляемость в эксплуатации.
+
+Иначе runtime tuning превращается в временный эксперимент, который нужно вручную повторять после каждого запуска.
