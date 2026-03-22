@@ -1,6 +1,6 @@
 # Tutorial 05: Изоляция конфигов для нескольких роботов
 
-Соответствует слайдам 12-13 из [presentation.md](../presentation.md).
+Соответствует слайдам 12-13 из [presentation](../../2026%20-%20ros%20meetup%20-%20presentation.md).
 
 ## Проблема
 

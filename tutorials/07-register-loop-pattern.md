@@ -1,6 +1,6 @@
 # Tutorial 07: Паттерн `register_loop`
 
-Соответствует второй половине слайда 20 из [presentation.md](../presentation.md).
+Соответствует второй половине слайда 20 из [presentation](../../2026%20-%20ros%20meetup%20-%20presentation.md).
 
 ## Проблема
 

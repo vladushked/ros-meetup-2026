@@ -1,6 +1,6 @@
 # Tutorial 03: Базовый класс ноды
 
-Соответствует слайдам 19-21 из [presentation.md](../presentation.md).
+Соответствует слайдам 19-21 из [presentation](../../2026%20-%20ros%20meetup%20-%20presentation.md).
 
 ## Проблема
 

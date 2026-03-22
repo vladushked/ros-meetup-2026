@@ -1,6 +1,6 @@
 # Tutorial 04: Runtime изменение и сохранение параметров
 
-Соответствует слайду 15 из [presentation.md](../presentation.md).
+Соответствует слайду 15 из [presentation](../../2026%20-%20ros%20meetup%20-%20presentation.md).
 
 ## Проблема
 

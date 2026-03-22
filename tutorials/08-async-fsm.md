@@ -1,6 +1,6 @@
 # Tutorial 08: Асинхронная FSM
 
-Развивает итоговый пункт из слайда 22 в [presentation.md](../presentation.md).
+Развивает итоговый пункт из слайда 22 в [presentation](../../2026%20-%20ros%20meetup%20-%20presentation.md).
 
 ## Проблема
 

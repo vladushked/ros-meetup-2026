@@ -1,6 +1,6 @@
 # Tutorial 06: Asyncio в ROS 2
 
-Соответствует слайду 20 из [presentation.md](../presentation.md).
+Соответствует слайду 20 из [presentation](../../2026%20-%20ros%20meetup%20-%20presentation.md).
 
 Источник вдохновения:
 - [m2-farzan/ros2-asyncio](https://github.com/m2-farzan/ros2-asyncio)

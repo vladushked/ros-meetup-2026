@@ -1,6 +1,6 @@
 # Tutorial 02: Система сборки и запуска
 
-Соответствует слайдам 16-17 из [presentation.md](../presentation.md).
+Соответствует слайдам 16-17 из [presentation](../../2026%20-%20ros%20meetup%20-%20presentation.md).
 
 ## Проблема
 
